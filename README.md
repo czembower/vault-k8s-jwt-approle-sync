@@ -28,7 +28,7 @@ The environment variables in the yaml below are used to configure the
 application behavior.
 
 ```shell
-kubectl create configmap -n cert-manager rotater --from-file=rotater.go
+kubectl create configmap -n cert-manager rotater --from-file=main.go
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: Pod
