@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -44,18 +43,13 @@ type vaultLogin struct {
 }
 
 var (
-	// vaultAddr := os.Getenv("VAULT_ADDR")
-	vaultAddr = "http://127.0.0.1:8200"
-	// authPath = os.Getenv("VAULT_AUTH_PATH")
-	authPath = "5g/jwt"
-	// authRole = os.Getenv("VAULT_AUTH_ROLE"),
-	authRole = "auth.demo.role"
-	// vaultNamespace = os.Getenv("VAULT_NAMESPACE")
-	vaultNamespace = "5GMobility"
-	// appRolePath = os.Getenv("VAULT_APP_ROLE_PATH")
-	appRolePath = "5g/approle"
-	// appRoleName = os.Getenv("VAULT_APP_ROLE_NAME")
-	appRoleName = "auth.demo.role"
+	vaultAddr      = os.Getenv("VAULT_ADDR")
+	authPath       = os.Getenv("VAULT_AUTH_PATH")
+	authRole       = os.Getenv("VAULT_AUTH_ROLE")
+	vaultNamespace = os.Getenv("VAULT_NAMESPACE")
+	appRolePath    = os.Getenv("VAULT_APP_ROLE_PATH")
+	appRoleName    = os.Getenv("VAULT_APP_ROLE_NAME")
+	secretIdSecret = os.Getenv("SECRET_ID_SECRET")
 )
 
 func getSaToken() string {
@@ -83,7 +77,7 @@ func getSaToken() string {
 			expiration = time.Unix(v, 0)
 		}
 		if nowTime-expiration.Unix() > 0 {
-			fmt.Println("token expired")
+			log.Println("token expired")
 		}
 	} else {
 		log.Fatalf("error unmarshalling jwt claims: %v", err)
@@ -172,7 +166,7 @@ func createK8sSecret(secretID string) {
 
 	secret := &v1.Secret{
 		ObjectMeta: metaV1.ObjectMeta{
-			Name:      "cert-manager-approle",
+			Name:      secretIdSecret,
 			Namespace: string(namespace),
 		},
 		StringData: map[string]string{
@@ -199,8 +193,9 @@ func main() {
 		tokenString := getSaToken()
 		clientToken := vaultJwtLogin(tokenString)
 		secretID, renewTimer := getSecretId(clientToken)
-		fmt.Println(secretID, renewTimer)
+		log.Println("Renewed secret-id")
 		createK8sSecret(secretID)
+		log.Printf("Synchronized to k8s secret. %v seconds until next renewal", renewTimer)
 		time.Sleep(time.Duration(renewTimer) * time.Second)
 	}
 }
